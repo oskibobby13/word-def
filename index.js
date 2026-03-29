@@ -32,10 +32,10 @@ let word = '';
 let lang = 'en';
 
 for (let i = 0; i < args.length; i++) {
-  if (args[i] === '-l' || args[i] === '--lang') {
+  if (args[i] === '-l' || args[i] === '--lang' || args[i] === '-language') {
     lang = args[i + 1] || 'en';
     i++;
-  } else if (args[i] === '-h' || args[i] === '--help') {
+  } else if (args[i] === '-h' || args[i] === '-help' || args[i] === '--h' || args[i] === '--help') {
     showHelp();
     process.exit(0);
   } else {
