@@ -1,6 +1,6 @@
 # word-def
 
-CLI tool to find definitions of any English word using the Free Dictionary API.
+CLI tool to find definitions of any word in multiple languages, powered by Wiktionary.
 
 ## Install
 
@@ -11,29 +11,56 @@ npm install -g word-def
 ## Usage
 
 ```bash
-word-def <word>
+word-def <word> [--lang <code>]
 ```
 
-Example:
+Examples:
 ```bash
 $ word-def hello
+📖 hello (English)
 
-📖 hello
+[Noun]
+  1. "Hello!" or an equivalent greeting.
 
-[noun]
-  1. a greeting used when meeting someone
-     → "hello, how are you?"
-  2. an expression of surprise
+[Interjection]
+  1. A greeting (salutation) said when meeting someone...
+$ word-def perro --lang es
+📖 perro (Spanish)
 
-[verb]
-  1. to say "hello" to someone
-     → "he helloed the crowd"
+[Noun]
+  1. dog (the species Canis familiaris, domesticated for thousands of years...)
+  2. clothes peg, clothespin
+  3. asshole (despicable person)
+
+[Adjective]
+  1. doggy or doggish
+  2. awful
+  3. wicked; mean
 ```
+
+## Supported Languages
+
+- English (en)
+- Spanish (es)
+- French (fr)
+- German (de)
+- Italian (it)
+- Portuguese (pt)
+- Russian (ru)
+- Japanese (ja)
+- Chinese (zh)
+- Korean (ko)
+- And 30+ more!
+
+## Options
+
+- `-l, --lang <code>` - Language code (default: en)
+- `-h, --help` - Show help
 
 ## Features
 
-- Fetches definitions from Free Dictionary API
-- Shows part of speech
-- Displays up to 3 definitions per part of speech
-- Shows example sentences when available
-- Works offline? No, requires internet
+- Covers 40+ languages via Wiktionary
+- Shows multiple definitions per part of speech
+- Includes example sentences
+- Fallback to English if target language not found
+- Shows available translations in other languages
