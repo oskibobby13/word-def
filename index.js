@@ -56,11 +56,15 @@ const langName = wiktionaryLanguages[lang] || lang;
 fetchFromWiktionary(originalWord, searchWord, lang);
 
 function fetchFromWiktionary(originalWord, lowerWord, targetLang) {
-  // For German and other languages with capitalized nouns, try original case first
-  // Then lowercase, then capitalized first letter
+  // For German and other languages with capitalized nouns
+  // try original case first, then capitalized first letter, then lowercase
   const wordsToTry = [originalWord];
   
-  // Only add lowercase if different from original
+  // If original is lowercase, try capitalized (for German nouns)
+  if (originalWord === originalWord.toLowerCase() && originalWord.length > 1) {
+    wordsToTry.push(originalWord.charAt(0).toUpperCase() + originalWord.slice(1));
+  }
+  // If original is different from lowercase, try lowercase
   if (originalWord.toLowerCase() !== originalWord) {
     wordsToTry.push(originalWord.toLowerCase());
   }
