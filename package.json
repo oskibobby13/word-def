@@ -1,6 +1,6 @@
 {
   "name": "word-def",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI tool to find definitions of any English word",
   "main": "index.js",
   "bin": {
@@ -9,7 +9,12 @@
   "scripts": {
     "test": "echo \"No tests yet\" && exit 0"
   },
-  "keywords": ["dictionary", "cli", "definition", "english"],
+  "keywords": [
+    "dictionary",
+    "cli",
+    "definition",
+    "english"
+  ],
   "author": "Oscar Roberts",
   "license": "MIT",
   "repository": {
