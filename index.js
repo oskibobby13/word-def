@@ -43,13 +43,16 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
+// Make search case-insensitive
+const searchWord = word.toLowerCase();
+
 if (!word) {
   showHelp();
   process.exit(1);
 }
 
 const langName = wiktionaryLanguages[lang] || lang;
-fetchFromWiktionary(word, lang);
+fetchFromWiktionary(searchWord, lang);
 
 function fetchFromWiktionary(word, targetLang) {
   // Try the language-specific Wiktionary first
