@@ -43,8 +43,9 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-// Make search case-insensitive
+// Make search case-insensitive - try original first, then lowercase
 const searchWord = word.toLowerCase();
+const originalWord = word;
 
 if (!word) {
   showHelp();
@@ -55,23 +56,36 @@ const langName = wiktionaryLanguages[lang] || lang;
 fetchFromWiktionary(searchWord, lang);
 
 function fetchFromWiktionary(word, targetLang) {
+  // Try original case first, then lowercase
+  const wordsToTry = [originalWord, searchWord];
+  
   // Try the language-specific Wiktionary first
   const langCodes = [
     targetLang,
     targetLang === 'en' ? null : 'en' // fallback to English
   ];
 
-  tryNextLanguage(0);
+  tryNextWord(0);
 
-  function tryNextLanguage(index) {
+  function tryNextWord(wordIndex) {
+    if (wordIndex >= wordsToTry.length) {
+      tryNextLanguage(0, null);
+      return;
+    }
+    
+    tryNextLanguage(0, wordsToTry[wordIndex]);
+  }
+
+  function tryNextLanguage(index, currentWord) {
     if (index >= langCodes.length || !langCodes[index]) {
-      console.log(`❌ No definition found for "${word}"`);
-      process.exit(1);
+      // Try next word variant
+      tryNextWord(wordsToTry.indexOf(currentWord) + 1);
+      return;
     }
 
     const currentLang = langCodes[index];
     const hostname = currentLang === 'en' ? 'en.wiktionary.org' : `${currentLang}.wiktionary.org`;
-    const path = `/api/rest_v1/page/definition/${encodeURIComponent(word)}`;
+    const path = `/api/rest_v1/page/definition/${encodeURIComponent(currentWord)}`;
 
     const options = {
       hostname,
@@ -103,18 +117,18 @@ function fetchFromWiktionary(word, targetLang) {
           const definitions = targetDefs || fallbackDefs;
 
           if (!definitions || definitions.length === 0) {
-            tryNextLanguage(index + 1);
+            tryNextLanguage(index + 1, currentWord);
             return;
           }
 
-          displayDefinitions(word, targetLang, definitions, parsed);
+          displayDefinitions(currentWord, targetLang, definitions, parsed);
 
         } catch (e) {
-          tryNextLanguage(index + 1);
+          tryNextLanguage(index + 1, currentWord);
         }
       });
     }).on('error', () => {
-      tryNextLanguage(index + 1);
+      tryNextLanguage(index + 1, currentWord);
     });
   }
 }
