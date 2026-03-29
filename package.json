@@ -1,0 +1,19 @@
+{
+  "name": "word-def",
+  "version": "1.0.0",
+  "description": "CLI tool to find definitions of any English word",
+  "main": "index.js",
+  "bin": {
+    "word-def": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": ["dictionary", "cli", "definition", "english"],
+  "author": "Oscar Roberts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oskibobby13/word-def.git"
+  }
+}
