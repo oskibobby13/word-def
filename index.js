@@ -43,21 +43,27 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-// Make search case-insensitive - try original first, then lowercase
-const searchWord = word.toLowerCase();
-const originalWord = word;
-
 if (!word) {
   showHelp();
   process.exit(1);
 }
 
-const langName = wiktionaryLanguages[lang] || lang;
-fetchFromWiktionary(searchWord, lang);
+// Make search case-insensitive - try original first, then lowercase
+const searchWord = word.toLowerCase();
+const originalWord = word;
 
-function fetchFromWiktionary(word, targetLang) {
-  // Try original case first, then lowercase
-  const wordsToTry = [originalWord, searchWord];
+const langName = wiktionaryLanguages[lang] || lang;
+fetchFromWiktionary(originalWord, searchWord, lang);
+
+function fetchFromWiktionary(originalWord, lowerWord, targetLang) {
+  // For German and other languages with capitalized nouns, try original case first
+  // Then lowercase, then capitalized first letter
+  const wordsToTry = [originalWord];
+  
+  // Only add lowercase if different from original
+  if (originalWord.toLowerCase() !== originalWord) {
+    wordsToTry.push(originalWord.toLowerCase());
+  }
   
   // Try the language-specific Wiktionary first
   const langCodes = [
@@ -65,72 +71,108 @@ function fetchFromWiktionary(word, targetLang) {
     targetLang === 'en' ? null : 'en' // fallback to English
   ];
 
-  tryNextWord(0);
+  let wordIndex = 0;
+  let langIndex = 0;
+  let retries = 0;
+  const MAX_RETRIES = 2;
+  const RETRY_DELAY = 1000;
 
-  function tryNextWord(wordIndex) {
-    if (wordIndex >= wordsToTry.length) {
-      tryNextLanguage(0, null);
-      return;
-    }
-    
-    tryNextLanguage(0, wordsToTry[wordIndex]);
-  }
-
-  function tryNextLanguage(index, currentWord) {
-    if (index >= langCodes.length || !langCodes[index]) {
-      // Try next word variant
-      tryNextWord(wordsToTry.indexOf(currentWord) + 1);
-      return;
-    }
-
-    const currentLang = langCodes[index];
-    const hostname = currentLang === 'en' ? 'en.wiktionary.org' : `${currentLang}.wiktionary.org`;
-    const path = `/api/rest_v1/page/definition/${encodeURIComponent(currentWord)}`;
-
-    const options = {
-      hostname,
-      path,
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'word-def-cli/1.0'
+  function tryNext() {
+    // Try next language
+    while (langIndex < langCodes.length) {
+      const currentLang = langCodes[langIndex];
+      if (!currentLang) {
+        langIndex++;
+        continue;
       }
-    };
 
-    https.get(options, (res) => {
-      let data = '';
+      const currentWord = wordsToTry[wordIndex];
+      const hostname = currentLang === 'en' ? 'en.wiktionary.org' : `${currentLang}.wiktionary.org`;
+      const path = `/api/rest_v1/page/definition/${encodeURIComponent(currentWord)}`;
 
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          
-          // Check if we got a valid response with definitions
-          if (!parsed || Object.keys(parsed).length === 0) {
-            tryNextLanguage(index + 1);
-            return;
-          }
-
-          // Find definitions in the target language
-          const targetDefs = parsed[targetLang];
-          const fallbackDefs = parsed['en'];
-          const definitions = targetDefs || fallbackDefs;
-
-          if (!definitions || definitions.length === 0) {
-            tryNextLanguage(index + 1, currentWord);
-            return;
-          }
-
-          displayDefinitions(currentWord, targetLang, definitions, parsed);
-
-        } catch (e) {
-          tryNextLanguage(index + 1, currentWord);
+      const options = {
+        hostname,
+        path,
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'word-def-cli/1.1'
         }
+      };
+
+      const req = https.get(options, (res) => {
+        let data = '';
+
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          // Rate limited - retry after delay
+          if (res.statusCode === 429 && retries < MAX_RETRIES) {
+            retries++;
+            setTimeout(tryNext, RETRY_DELAY * retries);
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            
+            // Check if we got an error response
+            if (!parsed || typeof parsed !== 'object' || Object.keys(parsed).length === 0) {
+              langIndex++;
+              retries = 0;
+              tryNext();
+              return;
+            }
+
+            // Find definitions in the target language
+            const targetDefs = parsed[targetLang];
+            const fallbackDefs = parsed['en'];
+            const definitions = targetDefs || fallbackDefs;
+
+            if (!definitions || definitions.length === 0) {
+              // Move to next language
+              langIndex++;
+              retries = 0;
+              tryNext();
+              return;
+            }
+
+            // Success! Display and exit
+            displayDefinitions(currentWord, targetLang, definitions, parsed);
+
+          } catch (e) {
+            // Move to next language
+            langIndex++;
+            retries = 0;
+            tryNext();
+          }
+        });
       });
-    }).on('error', () => {
-      tryNextLanguage(index + 1, currentWord);
-    });
+
+      req.on('error', () => {
+        // Network error - try next language
+        langIndex++;
+        retries = 0;
+        tryNext();
+      });
+
+      return; // Wait for response
+    }
+
+    // Tried all languages for current word, try next word
+    wordIndex++;
+    langIndex = 0;
+    retries = 0;
+    
+    if (wordIndex < wordsToTry.length) {
+      tryNext();
+    } else {
+      // Exhausted all options
+      console.log(`❌ No definition found for "${originalWord}" (${langName})`);
+      process.exit(1);
+    }
   }
+
+  tryNext();
 }
 
 function displayDefinitions(word, lang, definitions, fullData) {
@@ -182,9 +224,9 @@ Examples:
   word-def chien --lang fr     # French
   word-def Hund --lang de     # German
   word-def cane --lang it     # Italian
-  word-def狗 --lang zh        # Chinese
+  word-def 狗 --lang zh        # Chinese
   word-def собака --lang ru   # Russian
-  worddef 犬 --lang ja        # Japanese
+  word-def 犬 --lang ja        # Japanese
 
 Supported languages:
 ${Object.entries(wiktionaryLanguages).slice(0, 12).map(([c, n]) => `  ${c} - ${n}`).join('\n')}
